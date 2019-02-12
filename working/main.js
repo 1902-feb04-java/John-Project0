@@ -10,6 +10,7 @@ let mouseX;
 let mouseY;
 let tileset;
 let currentGameMap;
+let deltaEnd = 0;
 window.onload = initializeCanvas;
 //window.addEventListener('DOMContentLoaded', initializeCanvas);
 
@@ -39,19 +40,19 @@ function initInput()
         }
         if (e.key === 'a')
         {
-            objects[0].draw.posx -= (100 * deltaTime);
+            objects[0].velocity[0] = -1;
         }
         else if (e.key == 'd')
         {
-            objects[0].draw.posx += (100 * deltaTime);
+            objects[0].velocity[0] = 1;
         }
         if (e.key === 'w')
         {
-            objects[0].draw.posy += (100 * deltaTime);
+            objects[0].velocity[1] = 1;
         }
         else if (e.key == 's')
         {
-            objects[0].draw.posy += (-100 * deltaTime);
+            objects[0].velocity[1] = -1 ;
         }
         if (e.key === 'e')
         {
@@ -59,26 +60,47 @@ function initInput()
             //objects[0].draw.rotation += 10;
             //console.log(objects[0].draw.rotation);
             let g = new gameObject();
-            g.draw = drawSquare(objects[0].draw.posx, objects[0].draw.posy,
+            g.draw = drawSquare(objects[0].draw.posx + 15, objects[0].draw.posy -15,
                 10, 10, '#0000FF');
             g.update.push(destroyAfterTime(5));
             g.update.push(velocityToMovements);
-            let vec = normalizedVectorBetween(objects[0].draw.posx, objects[0].draw.posy,
+            let vec = normalizedVectorBetween(objects[0].draw.posx + 15, 
+                objects[0].draw.posy -15,
                 mouseX, mouseY);
-            g.velocity[0] = vec.posx * deltaTime * 10;
-            g.velocity[1] = vec.posy * deltaTime * 10;
+            g.velocity[0] = vec.posx * deltaTime * 30;
+            g.velocity[1] = vec.posy * deltaTime * 30;
             //g.update.push(checkPosition(g));
         }
         
-    }
+    };
+    window.onkeyup = (e) =>{
+        
+        if (e.key ==='w')
+        {
+            objects[0].velocity[1] = 0;
+        }
+        else if (e.key === 's')
+        {
+            objects[0].velocity[1] = 0;
+        }
+        if (e.key === 'a')
+        {
+            objects[0].velocity[0] = 0;
+        }
+        else if (e.key === 'd')
+        {
+            objects[0].velocity[0] = 0;
+        }
+    };
 }
 function initGame()
 {
     let player = new gameObject();
-    player.draw = drawSquare(20, 20);
+    player.draw = drawSquare(32, 32, 32, 32);
     player.update.push(checkPosition);
+    player.magnitude = 0.1;
     //player.update.push(gravity);
-    //player.update.push(velocityToMovement);
+    player.update.push(velocityToMovements);
     
     
 }
@@ -132,10 +154,10 @@ function gameObject()
     this.layer = 7;
     this.velocity = [0,0];
     this.remove = false;
+    this.magnitude = 1;
     //console.log(this);
     objects.push(this);
 }
-let deltaEnd = 0;
 function gameLoop()
 {
     let waitTime = performance.now() - deltaEnd;
@@ -152,6 +174,7 @@ function gameLoop()
 }
 function update()
 {
+    //console.log(deltaTime);
     for (let obj of objects)
     {
         for (let functions of obj.update)
@@ -216,8 +239,9 @@ function gravity(object)
 }
 function velocityToMovements(object)
 {
-    object.draw.posx += object.velocity[0] * delta;
-    object.draw.posy += object.velocity[1] * delta;
+    object.draw.posx += (object.velocity[0] * delta * object.magnitude);
+    object.draw.posy += (object.velocity[1] * delta * object.magnitude);
+    //console.log(object.magnitude);
 
     if(object.draw.posy < 5)
     {
@@ -337,6 +361,24 @@ function formSubmit(e)
     //currentGameMap.initialize(e.fil)
     //console.log(r);
     e.preventDefault();
+}
+function boxCollider(obj){
+    this.identify = Symbol('collider');
+    this.position = [obj.draw.posx, obj.draw.posy];
+    this.size = [obj.draw.width, obj.draw.height]
+    this.obj = obj;
+}
+function checkColliders (collider){
+    if (this.collders = undefined)
+    {
+        this.colliders = [];
+    }
+    else{
+        for (c of this.colliders)
+        {
+            
+        }
+    }
 }
 
 
