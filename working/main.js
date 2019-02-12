@@ -8,16 +8,21 @@ let deltaTime;
 let running = true;
 let mouseX;
 let mouseY;
+let tileset;
+let currentGameMap;
 window.onload = initializeCanvas;
 //window.addEventListener('DOMContentLoaded', initializeCanvas);
 
 function initializeCanvas(){
+    document.getElementById('file-form').addEventListener('submit',formSubmit);
+
     canvas = document.getElementById('gameArea');
     canvas.addEventListener('mousemove', onMouseMove);
     draw = canvas.getContext('2d');
     setBackground('#FF0000');
-    
-    
+    tileset = document.getElementById('tileset');
+    currentGameMap = new gameMap();
+    currentGameMap.initialize();
     drawSquare(20,20, 20, 20, '#FFFFFF');
     initGame();
     initInput();
@@ -60,8 +65,8 @@ function initInput()
             g.update.push(velocityToMovements);
             let vec = normalizedVectorBetween(objects[0].draw.posx, objects[0].draw.posy,
                 mouseX, mouseY);
-            g.velocity[0] = vec.posx * deltaTime;
-            g.velocity[1] = vec.posy * deltaTime;
+            g.velocity[0] = vec.posx * deltaTime * 10;
+            g.velocity[1] = vec.posy * deltaTime * 10;
             //g.update.push(checkPosition(g));
         }
         
@@ -127,7 +132,7 @@ function gameObject()
     this.layer = 7;
     this.velocity = [0,0];
     this.remove = false;
-    console.log(this);
+    //console.log(this);
     objects.push(this);
 }
 let deltaEnd = 0;
@@ -168,7 +173,11 @@ function update()
 }
 function drawScene(){
     draw.clearRect(0,0,canvas.width,canvas.height);
-    reDrawBackground();
+    currentGameMap.draw();
+    //reDrawBackground();
+    // draw image (image, grab image start, grab image start, grab how many, grab how many
+    // position on screen, position on screen, how big to draw, how big to draw)
+    //draw.drawImage(tileset,32,32, 32, 32, 256, 256 ,32 ,32);
     for(let i of objects)
     {
         //console.log(i);
@@ -259,9 +268,75 @@ function destroyAfterTime(time)
         if (t <= 0)
         {
             obj.remove = true;
-            console.log('removing');
+            //console.log('removing');
         }
     };
+}
+function gameMap(){
+    this.gMap = [];
+    this.draw = () =>
+    {
+        for (let x = 0; x < 12; x++)
+        {
+            
+            for(let y = 0; y < 12; y++)
+            {
+                draw.drawImage(tileset,
+                    this.getXLocation(this.gMap[x][y])*32,this.getYLocation(this.gMap[x][y])*32, 
+                    32, 32, x*32, y*32, 32, 32);
+            }
+        }
+    }
+    this.initialize = (file = null) =>
+    {
+        //console.log(this.gMap);
+        if (file)
+        {
+            let row = file.split(':');
+            let newMap = [];
+            row.shift();
+            for (let c of row)
+            {
+                newMap.push(c.split(','));
+            }
+            this.gMap = newMap;
+            
+        }
+        else{
+            for (let x = 0; x < 12; x++)
+            {
+                let hold = [];
+                //console.log(this.gMap);
+                for (let y = 0; y < 12; y++)
+                {
+                 hold.push(0);
+                }
+                this.gMap.push(hold);
+            }
+        }
+    }
+    this.getXLocation = (tileNumber) =>
+    {
+        return (tileNumber - (12 * Math.floor(tileNumber/12))); 
+    };
+    this.getYLocation = (tileNumber) =>
+    {
+        return (Math.floor(tileNumber/12));
+    }
+}
+function formSubmit(e)
+{
+    let f = new FileReader();
+    let r;
+    f.readAsText(document.getElementById('level-file').files[0]);
+
+    f.onload = (result) =>{
+        currentGameMap.initialize(f.result);
+    }
+    //f.readAsText(document.getElementById('level-file').files[0], r);
+    //currentGameMap.initialize(e.fil)
+    //console.log(r);
+    e.preventDefault();
 }
 
 
