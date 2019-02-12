@@ -6,11 +6,14 @@ let objects = [];
 let delta = 0;
 let deltaTime;
 let running = true;
+let mouseX;
+let mouseY;
 window.onload = initializeCanvas;
 //window.addEventListener('DOMContentLoaded', initializeCanvas);
 
 function initializeCanvas(){
     canvas = document.getElementById('gameArea');
+    canvas.addEventListener('mousemove', onMouseMove);
     draw = canvas.getContext('2d');
     setBackground('#FF0000');
     
@@ -53,8 +56,12 @@ function initInput()
             let g = new gameObject();
             g.draw = drawSquare(objects[0].draw.posx, objects[0].draw.posy,
                 10, 10, '#0000FF');
+            g.update.push(destroyAfterTime(5));
             g.update.push(velocityToMovements);
-            g.velocity[0] = 1;
+            let vec = normalizedVectorBetween(objects[0].draw.posx, objects[0].draw.posy,
+                mouseX, mouseY);
+            g.velocity[0] = vec.posx * deltaTime;
+            g.velocity[1] = vec.posy * deltaTime;
             //g.update.push(checkPosition(g));
         }
         
@@ -208,12 +215,53 @@ function velocityToMovements(object)
         object.draw.posy = 5;
         //object.velocity[1] = 0;
     }
-    console.log(object.velocity[1]);
+   // console.log(object.velocity[1]);
 }
 function screenSpaceToWorldSpace(posy)
 {
     
     return canvas.height - posy;
+}
+function onMouseMove(event)
+{
+    if(event.offsetX)
+    {
+        mouseX = event.offsetX;
+        mouseY = canvas.height - event.offsetY;
+    }
+    else if(event.layerX)
+    {
+        mouseX = event.layerX;
+        mouseY = event.layerY;
+    }
+    //console.log(mouseY);
+}
+function normalizedVectorBetween(posx1, posy1, posx2, posy2)
+{
+    let vector = {};
+    vector.posx = posx2 -posx1;
+    vector.posy = posy2 - posy1;
+    vector.magnitude = Math.sqrt((vector.posx * vector.posx)
+     + (vector.posy * vector.posy));
+     
+     vector.posx = vector.posx/vector.magnitude;
+     vector.posy = vector.posy/vector.magnitude;
+     //console.log(vector.posy);
+     vector.magnitude = 1;
+
+    return vector;
+}
+function destroyAfterTime(time)
+{
+    let t = time;
+    return (obj) => {
+        t = t - deltaTime;
+        if (t <= 0)
+        {
+            obj.remove = true;
+            console.log('removing');
+        }
+    };
 }
 
 
