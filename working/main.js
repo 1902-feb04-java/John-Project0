@@ -11,6 +11,8 @@ let mouseY;
 let tileset;
 let currentGameMap;
 let deltaEnd = 0;
+let symTest;
+
 window.onload = initializeCanvas;
 //window.addEventListener('DOMContentLoaded', initializeCanvas);
 
@@ -67,8 +69,8 @@ function initInput()
             let vec = normalizedVectorBetween(objects[0].draw.posx + 15, 
                 objects[0].draw.posy -15,
                 mouseX, mouseY);
-            g.velocity[0] = vec.posx * deltaTime * 30;
-            g.velocity[1] = vec.posy * deltaTime * 30;
+            g.velocity[0] = vec.posx;
+            g.velocity[1] = vec.posy;
             //g.update.push(checkPosition(g));
         }
         
@@ -95,13 +97,28 @@ function initInput()
 }
 function initGame()
 {
+    checkColliders = new checkColliders();
+    //console.log(checkColliders.emptyArray);
+    checkColliders.setArrays();
+
+
     let player = new gameObject();
     player.draw = drawSquare(32, 32, 32, 32);
     player.update.push(checkPosition);
     player.magnitude = 0.1;
     //player.update.push(gravity);
     player.update.push(velocityToMovements);
+    player.collider = new boxCollider(player);
     
+    let other = new gameObject();
+    other.draw = drawSquare(300,300,32,32);
+    other.collider = new boxCollider(other);
+    other.update.push(kinematicObject);
+
+    // symTest = other.collider.identify;
+
+    //checkColliders.drawCollider(other.collider);
+    //console.log(other.collider.identify == player.collider.identify);
     
 }
 
@@ -155,6 +172,8 @@ function gameObject()
     this.velocity = [0,0];
     this.remove = false;
     this.magnitude = 1;
+    this.checkCollision = true;
+    this.collider;
     //console.log(this);
     objects.push(this);
 }
@@ -180,7 +199,7 @@ function update()
         for (let functions of obj.update)
         {
             functions(obj);
-            
+            //console.log(obj);
         }
     }
     for (let x = 0; x < objects.length; x++)
@@ -193,6 +212,7 @@ function update()
             objects = objects.slice(0, x).concat(objects.slice(x+1, objects.length));
         }
     }
+
 }
 function drawScene(){
     draw.clearRect(0,0,canvas.width,canvas.height);
@@ -239,9 +259,38 @@ function gravity(object)
 }
 function velocityToMovements(object)
 {
+    if (object.collider){
+    let colliderHold = new boxCollider(object);
+     colliderHold.identify = object.collider.identify;
+     colliderHold.position[0] = object.collider.position[0];
+     colliderHold.position[1] = object.collider.position[1];
+     colliderHold.size[0] = object.collider.size[0];
+     colliderHold.size[1] = object.collider.size[1];
+
+    colliderHold.position[0] += (object.velocity[0] * delta * object.magnitude);
+    colliderHold.position[1] += (object.velocity[1] * delta * object.magnitude);
+        
+        let result = checkColliders.check(colliderHold);
+        //console.log(result);
+        if (!result)
+        {
+            //console.log('test');
+            object.collider = colliderHold;
+            object.draw.posx = object.collider.position[0];
+            object.draw.posy = object.collider.position[1];
+        }
+        else{
+            
+        }
+    }
+    else
+    {
     object.draw.posx += (object.velocity[0] * delta * object.magnitude);
     object.draw.posy += (object.velocity[1] * delta * object.magnitude);
+    }
+    //console.log(deltaTime);
     //console.log(object.magnitude);
+    
 
     if(object.draw.posy < 5)
     {
@@ -249,6 +298,12 @@ function velocityToMovements(object)
         //object.velocity[1] = 0;
     }
    // console.log(object.velocity[1]);
+}
+function kinematicObject(object)
+{
+    //console.log('here');
+    
+    checkColliders.drawCollider(object.collider);
 }
 function screenSpaceToWorldSpace(posy)
 {
@@ -362,23 +417,111 @@ function formSubmit(e)
     //console.log(r);
     e.preventDefault();
 }
-function boxCollider(obj){
-    this.identify = Symbol('collider');
+function boxCollider(obj = null){
+    this.identify = Symbol(obj);
     this.position = [obj.draw.posx, obj.draw.posy];
-    this.size = [obj.draw.width, obj.draw.height]
+    this.size = [obj.draw.width, obj.draw.height];
     this.obj = obj;
-}
-function checkColliders (collider){
-    if (this.collders = undefined)
-    {
-        this.colliders = [];
-    }
-    else{
-        for (c of this.colliders)
-        {
-            
-        }
-    }
+    this.isTrigger = false;
+    this.COLLISION_UP = false;
+    this.COLLISION_DOWN = false;
+    this.COLLISION_LEFT = false;
+    this.COLLISION_RIGHT = false;
+    
 }
 
+var checkColliders = function(){
+    this.accuracy = 8; // numbers that will work for this include 1, 2, 4, 8, 16 ,32
+    this.collisionArea;
+    this.colliders = [];
+    this.check = (collider) =>
+    {
+        // check for collisions, if none draw
+        let posX = Math.ceil(collider.position[0]/this.accuracy); let posY = Math.ceil(collider.position[1]/this.accuracy);
+        let sizeX = Math.ceil(collider.size[0]/this.accuracy); let sizeY = Math.ceil(collider.size[1]/this.accuracy);
+        //console.log(collider);
+            for (let x = posX; x < (posX + sizeX); x++)
+            {
+                for (let y = posY; y < (posY + sizeY); y++)
+                {
+                    if (this.collisionArea[x][y] === 0 || collider.identify === this.collisionArea[x][y])
+                    {
+                        //console.log('yay');
+                        
+                    }
+                    else if (this.collisionArea[x][y] === undefined)
+                    {
+                        this.collisionArea[x][y] = 0;
+                    }
+                    else { // there was a collision so return the location and symbol, and let the object handle it.
+                        
+                        //console.log(this.collisionArea);
+                        return [x,y, this.collisionArea[x][y]=== symTest];
+                    }
+                }
+            }
+            // nothing returned yet means no collision, so draw the collider
+            this.drawCollider(collider);
+            //console.log(this.collisionArea);
+            return null;
+        
+    };
+    this.drawCollider = (collider) =>
+    {
+        let posX = Math.ceil(collider.position[0]/this.accuracy); let posY = Math.ceil(collider.position[1]/this.accuracy);
+        let sizeX = Math.ceil(collider.size[0]/this.accuracy); let sizeY = Math.ceil(collider.size[1]/this.accuracy);
+        debugger;
+        for (let x = posX; x < (posX + sizeX); x++)
+            {
+                for (let y = posY; y < (posY + sizeY); y++)
+                {
+                    //console.log(`modifying ${x} and ${y}: ${this.collisionArea[x,y] === symTest}`);
+                    this.collisionArea[x][y] = collider.identify;
+                    this.clearColliderArea[x][y] = collider.identify;
+                }
+            }
+    };
+    this.clearHistory = () =>
+    {
+        // The clearColliderArea variable is from the current frame drawing only
+        // since it doesn't contain last frames collisions, it cannot be used to detect collision
+        // but since it only has this frames collisions, it can be used to clear last frames collisions.
+        for(let x = 0; x < this.collisionArea.length; x++)
+        {
+            for (let y = 0; y < this.collisionArea[x].length; y++)
+            {
+                if (this.collisionArea[x,y] != this.clearColliderArea[x,y])
+                {
+                    this.collisionArea[x,y] = 0;
+                }
+            }
+        }
+        // after we get rid of last frames collisions, we must now get rid of this frames collisions to get ready for the
+        // next frame.
+        this.clearColliderArea = this.emptyArray;
+    };
+    this.setArrays = () =>
+    {
+        this.collisionArea = Array(canvas.width/this.accuracy).fill(Array(canvas.height/this.accuracy).fill(0));
+        this.clearColliderArea = JSON.parse(JSON.stringify(this.collisionArea));
+        this.emptyArray = JSON.parse(JSON.stringify(this.collisionArea));
+        this.collisionArea = JSON.parse(JSON.stringify(this.collisionArea));
+        
+    };
+    this.clearColliderArea;
+    this.emptyArray;
+};
+function zeroArray(arr)
+{
+    
+
+    for (let x = 0; x < arr.length; x++)
+    {
+        for (let y = 0; y < arr[x].length; y++)
+        {
+            arr[x][y] = 0;
+        }
+    }
+    return arr;
+}
 
