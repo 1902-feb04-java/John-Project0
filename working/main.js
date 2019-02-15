@@ -69,6 +69,9 @@ function initInput()
             g.collider = new boxCollider(g);
             //g.collider.isTrigger = true;
             g.collider.ignore = objects[0].collider.identify;
+            g.collider.isTrigger = true;
+            g.triggerBehaviors.push(decreaseHealth);
+            g.triggerBehaviors.push(destroyOnTrigger(g));
             let vec = normalizedVectorBetween(objects[0].draw.posx + 15, 
                 objects[0].draw.posy -15,
                 mouseX, mouseY);
@@ -174,9 +177,11 @@ function gameObject()
     this.layer = 7;
     this.velocity = [0,0];
     this.remove = false;
+    this.health = 100;
     this.magnitude = 1;
     this.checkCollision = true;
     this.collider;
+    this.triggerBehaviors = [];
     //console.log(this);
     objects.push(this);
 }
@@ -267,15 +272,28 @@ function velocityToMovements(object)
         
         let result = checkColliders.check(colliderHold);
         //console.log(result);
-        if (!result || object.isTrigger)
+        if (!result)
         {
             //console.log('test');
             object.collider = colliderHold;
             object.draw.posx = object.collider.position[0];
             object.draw.posy = object.collider.position[1];
         }
+        else if (object.collider.isTrigger)
+        {
+            let triggeringObject = objectLookup(result[2]);
+            //console.log('hit');
+            for (let x of object.triggerBehaviors)
+            {
+                x(triggeringObject);
+                console.log(triggeringObject.health);
+            }
+            object.collider = colliderHold;
+            object.draw.posx = object.collider.position[0];
+            object.draw.posy = object.collider.position[1];
+        }
         else{
-            
+            //console.log('hit');
         }
     }
     else
@@ -437,7 +455,7 @@ function inBounds(collider)
 }
 
 var checkColliders = function(){
-    this.accuracy = 8; // numbers that will work for this include 1, 2, 4, 8, 16 ,32
+    this.accuracy = 1; // numbers that will work for this include 1, 2, 4, 8, 16 ,32
     this.collisionArea;
     this.colliders = [];
     this.check = (collider) =>
@@ -463,7 +481,7 @@ var checkColliders = function(){
                     else { // there was a collision so return the location and symbol, and let the object handle it.
                         
                         //console.log(this.collisionArea);
-                        return [x,y, this.collisionArea[x][y]=== symTest];
+                        return [x,y, this.collisionArea[x][y]];
                     }
                 }
             }
@@ -532,5 +550,32 @@ function zeroArray(arr)
         }
     }
     return arr;
+}
+function decreaseHealth(obj, amount = 20)
+{
+    obj.health -= amount;
+    if (obj.health < 0)
+    {
+        obj.remove = true;
+    }
+}
+function objectLookup(symbol)
+{
+    for (let x of objects)
+    {
+        if (x.collider.identify === symbol)
+        {
+            return x;
+        }
+    }
+    return null;
+}
+function destroyOnTrigger(obj)
+{
+    let object = obj;
+    return () =>
+    {
+        object.remove = true;
+    }
 }
 
