@@ -121,6 +121,8 @@ function initGame()
     other.collider = new boxCollider(other);
     other.update.push(kinematicObject);
 
+    let spawn =  new gameObject();
+    spawn.update.push(new spawner(other, 3));
     // symTest = other.collider.identify;
 
     //checkColliders.drawCollider(other.collider);
@@ -219,6 +221,7 @@ function update()
         }
         else{
             objects = objects.slice(0, x).concat(objects.slice(x+1, objects.length));
+            console.log(objects);
         }
     }
 
@@ -233,6 +236,7 @@ function drawScene(){
     for(let i of objects)
     {
         //console.log(i);
+        if(i.draw != null)
         drawSquare(i.draw.posx, 
             screenSpaceToWorldSpace(i.draw.posy), i.draw.width, i.draw.height,
              i.draw.color, i.rotation);
@@ -285,8 +289,13 @@ function velocityToMovements(object)
             //console.log('hit');
             for (let x of object.triggerBehaviors)
             {
+                try {
                 x(triggeringObject);
-                console.log(triggeringObject.health);
+                }
+                catch(e)
+                {
+                    console.log(e);
+                }
             }
             object.collider = colliderHold;
             object.draw.posx = object.collider.position[0];
@@ -563,6 +572,7 @@ function objectLookup(symbol)
 {
     for (let x of objects)
     {
+        if(x.collider != null)
         if (x.collider.identify === symbol)
         {
             return x;
@@ -577,5 +587,36 @@ function destroyOnTrigger(obj)
     {
         object.remove = true;
     }
+}
+function spawner(obj, q = 3)
+{
+    this.mainObject = obj;
+    this.quantity = q;
+    this.createObject = (posX, posY) =>
+    {
+        let x = new gameObject();
+        x.update = this.mainObject.update;
+        x.draw = drawSquare(posX, posY, obj.draw.width, obj.draw.height, '#00FFFF');
+        console.log(posX);
+        x.collider = new boxCollider(x);
+        return x;
+    };
+    this.controlledObjects = [];
+    for (let x = 0; x < this.quantity; x++)
+    {
+        this.controlledObjects[x] = this.createObject(x*100,100 + (Math.random() * 200));
+    }
+    return () => {
+        
+        for (let x = 0; x < this.quantity; x++)
+    {
+        if (this.controlledObjects[x].remove)
+        {
+        this.controlledObjects[x] = this.createObject(x*100, 100 + (Math.random() * 200));
+        //console.log(x);
+        }
+        console.log(this.controlledObjects[x]);
+    }
+    };
 }
 
