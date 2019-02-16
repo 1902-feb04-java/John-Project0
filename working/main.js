@@ -12,6 +12,12 @@ let tileset;
 let currentGameMap;
 let deltaEnd = 0;
 let symTest;
+let pew = new Audio('pew.mp3');
+let pain = new Audio('pain.mp3');
+let score = 0;
+let scoreObject;
+let mainPlayer;
+let playerHealthObject;
 
 window.onload = initializeCanvas;
 //window.addEventListener('DOMContentLoaded', initializeCanvas);
@@ -27,6 +33,10 @@ function initializeCanvas(){
     currentGameMap = new gameMap();
     currentGameMap.initialize();
     drawSquare(20,20, 20, 20, '#FFFFFF');
+    scoreObject = document.getElementById('score');
+    scoreObject.innerText = `Current Score: ${score}`;
+    playerHealthObject = document.getElementById('player-health');
+    checkColliders = new checkColliders();
     initGame();
     initInput();
     
@@ -70,14 +80,30 @@ function initInput()
             //g.collider.isTrigger = true;
             g.collider.ignore = objects[0].collider.identify;
             g.collider.isTrigger = true;
-            g.triggerBehaviors.push(decreaseHealth);
+            g.triggerBehaviors.push(new decreaseHealth(50, true));
             g.triggerBehaviors.push(destroyOnTrigger(g));
             let vec = normalizedVectorBetween(objects[0].draw.posx + 15, 
                 objects[0].draw.posy -15,
                 mouseX, mouseY);
             g.velocity[0] = vec.posx;
             g.velocity[1] = vec.posy;
+            pew.pause();
+            pew.currentTime = 0;
+            pew.play(); 
             //g.update.push(checkPosition(g));
+        }
+        if (!running)
+        {
+            if (e.key === ' ')
+            {
+                objects = [];
+                running = true;
+                initGame();
+                deltaEnd = performance.now();
+                delta = 0;
+                requestAnimationFrame(gameLoop);
+
+            }
         }
         
     };
@@ -103,23 +129,27 @@ function initInput()
 }
 function initGame()
 {
-    checkColliders = new checkColliders();
+    
     //console.log(checkColliders.emptyArray);
     checkColliders.setArrays();
 
 
     let player = new gameObject();
     player.draw = drawSquare(32, 32, 32, 32);
-    player.update.push(checkPosition);
+    //player.update.push(checkPosition);
     player.magnitude = 0.1;
     //player.update.push(gravity);
     player.update.push(velocityToMovements);
     player.collider = new boxCollider(player);
+    //player.collisionBehaviors.push(new decreaseHealth(1,false));
+    mainPlayer = player;
     
     let other = new gameObject();
     other.draw = drawSquare(300,300,32,32);
     other.collider = new boxCollider(other);
-    other.update.push(kinematicObject);
+    other.update.push(velocityToMovements);
+    other.update.push(new moveTowards(objects[0], 0.05));
+    other.collisionBehaviors.push(new decreaseHealth(1,false, objects[0]));
 
     let spawn =  new gameObject();
     spawn.update.push(new spawner(other, 3));
@@ -184,6 +214,7 @@ function gameObject()
     this.checkCollision = true;
     this.collider;
     this.triggerBehaviors = [];
+    this.collisionBehaviors = [];
     //console.log(this);
     objects.push(this);
 }
@@ -198,9 +229,21 @@ function gameLoop()
     delta = deltaEnd - deltaStart;
     deltaTime = delta/1000;
     //console.log(delta);
-    if(running);
+    if(running){
     requestAnimationFrame(gameLoop);
+    }
+    else{
+        gameOver();
+    }
     
+}
+function gameOver()
+{
+    //drawSquare(0, 0, canvas.width, canvas.height, '#FF0000');
+    draw.font = '30px Arial';
+    draw.fillText(`Game Over`,0,30);
+    draw.fillText(`Score: ${score}`,0, 60);
+    draw.fillText(`Press Space to Reset`,0,90);
 }
 function update()
 {
@@ -224,6 +267,20 @@ function update()
             console.log(objects);
         }
     }
+    if (mainPlayer===null)
+    {
+        running = false;
+        playerHealthObject.innerText = `Player Health: ${0}`;
+    }
+    else if(mainPlayer.health <= 0){
+        running = false;
+        playerHealthObject.innerText = `Player Health: ${0}`;
+    }
+    else{
+        playerHealthObject.innerText = `Player Health: ${mainPlayer.health}`;
+    }
+    
+    
 
 }
 function drawScene(){
@@ -279,6 +336,7 @@ function velocityToMovements(object)
         if (!result)
         {
             //console.log('test');
+            
             object.collider = colliderHold;
             object.draw.posx = object.collider.position[0];
             object.draw.posy = object.collider.position[1];
@@ -302,7 +360,18 @@ function velocityToMovements(object)
             object.draw.posy = object.collider.position[1];
         }
         else{
-            //console.log('hit');
+            let collidingObject = objectLookup(result[2]);
+
+            for (let x of object.collisionBehaviors)
+            {
+                try{
+                x(collidingObject);
+                }
+                catch(e)
+                {
+
+                }
+            }
         }
     }
     else
@@ -560,13 +629,45 @@ function zeroArray(arr)
     }
     return arr;
 }
-function decreaseHealth(obj, amount = 20)
+function decreaseHealth(amount = 20, addToScore = true, target = null)
 {
-    obj.health -= amount;
-    if (obj.health < 0)
+    this.amount = amount;
+    this.target = target;
+    if (this.target)
+    {
+        return (obj) =>{
+            if (obj.collider.identify === target.collider.identify){
+            obj.health -= this.amount;
+        if (obj.health <= 0)
+        {
+            obj.remove = true;
+            if(addToScore){
+            score += 20;
+            scoreObject.innerText = `Current Score: ${score}`;
+            }
+        }
+        pain.pause();
+        pain.currentTime = 0;
+        pain.play();
+        }
+    }
+    }
+    else{
+    return (obj) => {
+    obj.health -= this.amount;
+    if (obj.health <= 0)
     {
         obj.remove = true;
+        if(addToScore){
+        score += 20;
+        scoreObject.innerText = `Current Score: ${score}`;
+        }
     }
+    pain.pause();
+    pain.currentTime = 0;
+    pain.play();
+}
+}
 }
 function objectLookup(symbol)
 {
@@ -599,6 +700,7 @@ function spawner(obj, q = 3)
         x.draw = drawSquare(posX, posY, obj.draw.width, obj.draw.height, '#00FFFF');
         console.log(posX);
         x.collider = new boxCollider(x);
+        x.collisionBehaviors = this.mainObject.collisionBehaviors;
         return x;
     };
     this.controlledObjects = [];
@@ -619,4 +721,17 @@ function spawner(obj, q = 3)
     }
     };
 }
+function moveTowards( target, speed)
+{
+    this.target = target;
+    this.speed = speed;
+    return (obj) => {
+        let vec = normalizedVectorBetween(obj.draw.posx, obj.draw.posy, 
+            this.target.draw.posx, this.target.draw.posy);
+            obj.velocity[0] = vec.posx * speed;
+            obj.velocity[1] = vec.posy * speed;
+    }
+}
+
+
 
