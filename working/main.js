@@ -102,6 +102,7 @@ function initInput()
                 deltaEnd = performance.now();
                 delta = 0;
                 requestAnimationFrame(gameLoop);
+                document.getElementById('score').innerHTML = 'Current Score: 0';
 
             }
         }
