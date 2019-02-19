@@ -24,7 +24,7 @@ window.onload = initializeCanvas;
 
 function initializeCanvas(){
     document.getElementById('file-form').addEventListener('submit',formSubmit);
-
+    score = 0;
     canvas = document.getElementById('gameArea');
     canvas.addEventListener('mousemove', onMouseMove);
     draw = canvas.getContext('2d');
@@ -129,7 +129,7 @@ function initInput()
 }
 function initGame()
 {
-    
+    score = 0;
     //console.log(checkColliders.emptyArray);
     checkColliders.setArrays();
 
